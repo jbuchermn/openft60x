@@ -1,4 +1,6 @@
-lib/
 *.o
 *.a
 a.out
+main_libusb_version
+logs/
+lib/

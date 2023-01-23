@@ -1,7 +1,7 @@
 /*
  * gcc -c main_libusb_version.c -o main_libusb_version.o
- * gcc main.o lib/libftd3xx-static.a -o a.out
- * ./a.out
+ * gcc main_libusb_version.o lib/libftd3xx-static.a -o main_libusb_version
+ * ./main_libusb_version
  *
  * >--- FT60x ---
  * > libusb version linked into libftd3xx-static.a: 1.0.22.11312 (http://libusb.info)

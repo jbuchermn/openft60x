@@ -1,0 +1,96 @@
+Reverse engineering FT60x drivers
+=================================
+
+TODO
+
+1. Replacing libusb in static proprietary library
+-------------------------------------------------
+
+First we need to find the correct version of libusb to patch, compile and replace
+in libftd3xx-static.a. The micro c program main_libusb_version achieves that calling
+the method "libusb_get_version".
+
+    $ ./main_libusb_version
+    > --- FT60x ---
+    > libusb version linked into libftd3xx-static.a: 1.0.22.11312 (http://libusb.info)
+
+Now we can clone libusb and checkout this release (0034b2afdcdb1614e78edaa2a9e22d5936aeae5d).
+
+We're now ready to patch libusb adding debug printfs simply by unpacking the static
+library (.a), exchanging libusbs .o-files with our new ones and repackaging the lib.
+Care must be taken here as FTDI have included a second hotplug.o (their own hotplug.cpp) in
+the static library to not overwrite it with libusb's:
+
+    $ nm libftd3xx-static.a | grep -A 10 hotplug.o
+    > hotplug.o:  # libusb
+    >                  U calloc
+    >                  U free
+    > 0000000000000090 r __FUNCTION__.5812
+    > 00000000000000c0 r __FUNCTION__.5825
+    > 0000000000000100 r __FUNCTION__.5838
+    > 0000000000000130 r __FUNCTION__.5849
+    >                  U _GLOBAL_OFFSET_TABLE_
+    >                  U libusb_free_device_list
+    >                  U libusb_get_device_list
+    >                  U libusb_has_capability
+    > 00000000000006f0 T libusb_hotplug_deregister_callback
+    > 0000000000000418 T libusb_hotplug_register_callback
+    > 0000000000000000 t list_add
+    > 0000000000000045 t list_add_tail
+    > 0000000000000088 t list_del
+    >                  U pthread_mutex_lock
+    >                  U pthread_mutex_unlock
+    >                  U usbi_default_context
+    > 000000000000089b T usbi_hotplug_deregister
+    > 00000000000001e7 T usbi_hotplug_match
+    > --
+    > hotplug.o:  # FTDI
+    >                  U __cxa_pure_virtual
+    > 0000000000000000 V DW.ref.__gxx_personality_v0
+    >                  U _GLOBAL_OFFSET_TABLE_
+    >                  U __gxx_personality_v0
+    >                  U libusb_free_config_descriptor
+    >                  U libusb_get_bus_number
+    >                  U libusb_get_device_address
+    >                  U libusb_get_port_numbers
+    >                  U libusb_has_capability
+    >                  U libusb_hotplug_deregister_callback
+    >                  U libusb_hotplug_register_callback
+    >                  U pthread_create
+    >                  w __pthread_key_create
+    >                  U strcmp
+    >                  U _Unwind_Resume
+    >                  U _Z7logging12FT_LOG_LEVELPKcz
+    >                  U _ZdlPv
+    > 0000000000000000 t _ZL18__gthread_active_pv
+    > 0000000000000000 W _ZN10device_lib12get_topologyEPh
+    > 0000000000000000 W _ZN10device_lib18get_device_addressEv
+
+See patch_lib.sh for the details
+
+
+2. Using usbmon and wireshark to capture USB traffic
+----------------------------------------------------
+
+This is a more general approach without relying on the ability to change libusb:
+
+First, check that the kernel module usbmon is loaded
+
+    $ lsmod | grep usbmon
+    $ modprobe usbmon
+
+Then capture with tcpdump and open with wirehsark
+
+    $ tcpdump -i usbmon0 -w ./log.pcap
+    $ wireshark ./log.pcap
+
+
+3. Try and try again
+--------------------
+
+TODO
+
+4. Results on the protocol
+--------------------------
+
+TODO
