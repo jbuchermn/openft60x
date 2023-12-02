@@ -19,6 +19,7 @@
       with pkgs; mkShell {
         buildInputs = [
           gcc
+          gdb
 
           # to make libusb
           autoconf

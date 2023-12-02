@@ -94,3 +94,98 @@ TODO
 --------------------------
 
 TODO
+
+4.1 Config
+----------
+
+* get firmware version
+    type = C0       request = F1  value = 0  index = 0000
+
+* get / set device config
+    type = C0 / 40  request = CF  value = 1  index = 0000
+
+* ???: get during FT_Create
+    type = C0       request = 03  value = 1  index = 8400
+    --> result is always 00 00 17 00
+    --> traceback points in the direction of a device type (ft600_handle::update_device_type)
+
+* ???: get / set during FT_Create
+    type = C0 / 40  request = 03  value = 1  index = 8000
+    --> result is 00 cc 23 01, where cc seems to count upward, and 23 can also be 03 or 13, or ..., but is always set (using 40-control) to 23
+        --> more precisely, code only seems to care about third bit in third byte (16 -> 36, 03 -> 23)
+    --> the value seems to be kept while the device is running but not persisted
+    --> stting these values to e.g. 18 17 16 15 seems to "brick" it
+
+* enable GPIO
+    type =      40  request = 02  value = 2  index =        0000
+
+* get / set GPIO
+    type = C0 / 40  request = 02  value = 1  index = 001F / 0000
+
+* set GPIO pull
+    type =      40  request = 02  value = 3  index =        0000
+
+
+4.2 20byte commands
+-------------------
+
+* initial command sent in FT_Create
+    .. .. .. .. dp 03 .. .. .. .. .. .. .. .. .. .. .. .. .. ..
+        dp: pipe (d=8)
+            - in case of 245, only 82
+            - in case of 600, 4channels: sent for all 82, 83, 84, 85
+
+
+* write packet
+    .. .. .. .. dp 01 .. .. ss ss ss SS .. .. .. .. .. .. .. ..
+
+        ss: size, SS: MSB
+        dp: pipe (d=0)
+            - in case of 600, 4channels: 02, 03, 04, 05
+              where passing 8p into FT_WritePipe is changed to 0p
+
+
+* read packet
+    .. .. .. .. dp 01 .. .. ss ss ss SS .. .. .. .. .. .. .. ..
+
+        ss: size, SS: MSB
+        dp: pipe (d=8)
+            - in case of 600, 4 channels: 82, 83, 84, 85
+              where passing 0p into FT_ReadPipe is changed to 8p
+
+
+* flush pipe
+    rr rr rr rr pp 03 .. .. 3A 8A 40 .. .. .. .. .. .. .. .. ..
+
+        rr: Apepars to be random
+        pp: pipe
+
+
+* abort pipe
+    .. .. .. .. pp .. .. .. rr rr rr rr .. .. .. .. .. .. .. ..
+    .. .. .. .. pp .. .. .. rr rr rr rr .. .. .. .. .. .. .. ..
+    .. .. .. .. pp 03 .. .. rr rr rr rr .. .. .. .. .. .. .. ..
+
+        rr: Appears to be random
+        pp: pipe
+
+
+* set stream pipe
+    .. .. .. .. pp .. .. .. .. rr rr rr .. .. .. .. .. .. .. ..
+    .. .. .. .. dp 02 .. .. ss ss ss SS .. .. .. .. .. .. .. ..
+
+        pp: pipe
+        dp: pipe adjusted corresponding to input (i.e. either fixed on 8 or 0)
+            - read: d=8
+            - write d=0
+
+
+* clear stream pipe
+    .. .. .. .. pp .. .. .. rr rr rr rr .. .. .. .. .. .. .. ..
+    .. .. .. .. dp 03 .. .. rr rr rr rr .. .. .. .. .. .. .. ..
+
+        rr: Appears to be random
+        dp: pipe adjusted corresponding to input (i.e. either fixed on 8 or 0)
+            - read: d=8
+            - write d=0
+

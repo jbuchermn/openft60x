@@ -12,7 +12,8 @@ int main(int argc, char* argv[]){
 	FT_GetLibraryVersion(&version);
 	printf("[MAIN] > Library version: %d.%d.%d\n", version >> 24, (uint8_t)(version >> 16), version & 0xFFFF);
 
-    /* device info - from manual */
+
+    /* #<{(| device info - from manual |)}># */
     /* FT_STATUS ftStatus; */
     /* DWORD numDevs = 0; */
     /* ftStatus = FT_CreateDeviceInfoList(&numDevs); */
@@ -66,6 +67,8 @@ int main(int argc, char* argv[]){
         return -1;
     }
 
+    /* FT_GetVIDPID(handle, NULL, NULL); */
+
     /* #<{(| get chip configuration |)}># */
     /* printf("[MAIN] FT_GetChipConfiguration\n"); */
     /* FT_60XCONFIGURATION configuration; */
@@ -76,7 +79,7 @@ int main(int argc, char* argv[]){
 
     /* #<{(| set chip configuration |)}># */
     /* configuration.FIFOMode = CONFIGURATION_FIFO_MODE_245; */
-    /* configuration.ChannelConfig = CONFIGURATION_CHANNEL_CONFIG_1_OUTPIPE; */
+    /* configuration.ChannelConfig = CONFIGURATION_CHANNEL_CONFIG_1; */
     /*  */
     /* printf("[MAIN] Writing configuration\n"); */
     /* FT_SetChipConfiguration(handle, &configuration); */
@@ -96,41 +99,66 @@ int main(int argc, char* argv[]){
     /* } */
 
 
-
-
     /* #<{(| write |)}># */
-    /* const unsigned long buffer_len = 1; */
-    /* unsigned char buffer[buffer_len]; */
-    /* for(int i=0 ; i<buffer_len; i++) buffer[i] = i % 256; */
+    /* { */
+    /*     const unsigned long buffer_len = 512 + 2; */
+    /*     unsigned char buffer[buffer_len]; */
+    /*     for(int i=0 ; i<buffer_len; i++) buffer[i] = i % 256; */
     /*  */
-    /* for (int i=0; i<10; i++) { */
-    /*     unsigned int count = 0; */
-    /*     printf("[MAIN] FT_WritePipe\n"); */
-    /*     int res; */
-    /*     if (FT_OK != (res = FT_WritePipe(handle, i%2 == 0 ? 0x82 : 0x02, buffer, buffer_len, &count, 1000))) { */
-    /*         printf("[MAIN] > Error transmitting: %d %d\n", res, count); */
-    /*         break; */
+    /*     #<{(| FT_FlushPipe(handle, 0x02); |)}># */
+    /*     FT_SetStreamPipe(handle, 1, 0, 0x02, buffer_len); */
+    /*  */
+    /*     for (int i=0; i<10; i++) { */
+    /*         unsigned int count = 0; */
+    /*         int res; */
+    /*         if (FT_OK != (res = FT_WritePipe(handle, 0x02, buffer, buffer_len, &count, 1000))) { */
+    /*             printf("Error transmitting: %d %d\n", res, count); */
+    /*         }else{ */
+    /*             printf("Transmitted: %d\n", count); */
+    /*         } */
     /*     } */
+    /*  */
+    /*     #<{(| printf("%d\n", FT_FlushPipe(handle, 0x02)); |)}># */
     /* } */
 
-    /* #<{(| read |)}># */
-    /* const unsigned long buffer_len = 512; */
-    /* unsigned char buffer[buffer_len]; */
-    /*  */
-    /* for (int i=0; i<10; i++) { */
-    /*     unsigned int count = 0; */
-    /*     printf("[MAIN] FT_ReadPipe\n"); */
-    /*     int res; */
-    /*     if (FT_OK != (res = FT_ReadPipe(handle, 0x82, buffer, buffer_len, &count, 1000))) { */
-    /*         printf("[MAIN] > Error receiving: %d %d\n", res, count); */
-    /*         break; */
-    /*     } */
-    /* } */
+    /* read */
+    {
+        const unsigned long buffer_len = 32;
+        unsigned char buffer[buffer_len];
+
+        FT_SetStreamPipe(handle, 0, 1, 0x82, buffer_len);
+
+        unsigned char counter = 255;
+        int success_counter = 0;
+
+        /* FT_FlushPipe(handle, 0x82); */
+        for (int i=0; i<100; i++) {
+            printf("---\n");
+            unsigned int count = 0;
+            int res;
+            if (FT_OK != (res = FT_ReadPipeEx(handle, 0, buffer, buffer_len, &count, 1000))) {
+                printf("E%d\n", res);
+            }
+
+            for(int i=0; i<count; i+=2){
+                if(buffer[i] != (unsigned char)(counter+1)){
+                    printf("S[%4d]: %02X-%02X(%d)\n", success_counter, counter, buffer[i], (buffer[i] - counter + 255)%256);
+                    success_counter = 0;
+                }
+                else
+                    success_counter++;
+                counter = buffer[i];
+            }
+        }
+    }
 
     /* get firmware version */
-    printf("[MAIN] FT_GetFirmwareVersion\n");
-    FT_GetFirmwareVersion(handle, &version);
-    printf("[MAIN] > FT_GetFirmwareVersion: %d\n", version);
+    /* printf("[MAIN] FT_GetFirmwareVersion\n"); */
+    /* FT_GetFirmwareVersion(handle, &version); */
+    /* printf("[MAIN] > FT_GetFirmwareVersion: %d\n", version); */
+
+    /* unsigned int buffer[1000]; */
+    /* FT_SetGPIOPull(handle, 255, 0); */
 
 
     /* close */
